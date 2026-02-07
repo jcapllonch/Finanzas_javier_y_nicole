@@ -1,0 +1,45 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block content %}
+  <div class="card" style="max-width:720px; margin:0 auto;">
+    <h2 style="margin-top:0;">🗑️ Eliminar movimiento</h2>
+    <p class="muted">¿Seguro que quieres eliminar este movimiento? Esta acción no se puede deshacer.</p>
+
+    <div class="card" style="background: rgba(255,255,255,.04); box-shadow:none;">
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:10px;">
+        <div><span class="muted">Fecha</span><br><strong>{{ mov.fecha }}</strong></div>
+        <div>
+          <span class="muted">Tipo</span><br>
+          {% if mov.tipo == "INGRESO" %}
+            <span class="badge badge-ingreso">⬆ Ingreso</span>
+          {% else %}
+            <span class="badge badge-gasto">⬇ Gasto</span>
+          {% endif %}
+        </div>
+        <div><span class="muted">Categoría</span><br><strong>{{ mov.categoria.nombre }}</strong></div>
+        <div><span class="muted">Monto</span><br><strong class="money">$ {{ mov.monto|floatformat:0|intcomma }}</strong></div>
+      </div>
+
+      {% if mov.descripcion %}
+        <div style="margin-top:10px;">
+          <span class="muted">Descripción</span><br>
+          <strong>{{ mov.descripcion }}</strong>
+        </div>
+      {% endif %}
+    </div>
+
+    <form method="post" style="margin-top:14px; display:flex; gap:10px; flex-wrap:wrap;">
+      {% csrf_token %}
+      <button class="btn btn-danger" type="submit">Sí, eliminar</button>
+      <a class="btn btn2" href="{% url 'core:movimientos' %}">Cancelar</a>
+    </form>
+
+    <style>
+      @media (max-width: 720px){
+        .card > div[style*="grid-template-columns"]{
+          grid-template-columns: 1fr !important;
+        }
+      }
+    </style>
+  </div>
+{% endblock %}

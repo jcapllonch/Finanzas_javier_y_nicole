@@ -1,0 +1,221 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block content %}
+
+  <!-- HEADER -->
+  <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; justify-content:space-between;">
+    <div>
+      <h2 style="margin:0;">Dashboard</h2>
+      <p class="muted" style="margin-top:6px; margin-bottom:0;">
+        Viendo:
+        {% for num, nombre in meses %}
+          {% if num == mes %}{{ nombre }}{% endif %}
+        {% endfor %}
+        {{ anio }}
+      </p>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn btn-sm" href="{% url 'core:movimiento_nuevo' %}">+ Nuevo</a>
+      <a class="btn btn2 btn-sm" href="{% url 'core:movimientos' %}">Movimientos</a>
+      <a class="btn btn2 btn-sm" href="{% url 'core:categorias' %}">Categorías</a>
+    </div>
+  </div>
+
+  <!-- TOOLBAR UNIFORME -->
+  <div class="card" style="margin-top:12px; padding:12px;">
+    <div class="dash-toolbar">
+      <form method="get" class="dash-toolbar-left">
+        <label class="muted">Mes</label>
+        <select name="mes" style="width:auto; min-width:190px;">
+          {% for num, nombre in meses %}
+            <option value="{{ num }}" {% if num == mes %}selected{% endif %}>{{ nombre }}</option>
+          {% endfor %}
+        </select>
+
+        <label class="muted">Año</label>
+        <select name="anio" style="width:auto; min-width:130px;">
+          {% for a in anios %}
+            <option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>
+          {% endfor %}
+        </select>
+
+        <button class="btn btn-sm" type="submit">Ver</button>
+      </form>
+
+      <div class="dash-toolbar-right">
+        <a class="btn btn2 btn-sm" href="/?mes={{ mes_prev }}&anio={{ anio_prev }}">← Anterior</a>
+        <a class="btn btn2 btn-sm" href="/?mes={{ mes_next }}&anio={{ anio_next }}">Siguiente →</a>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    .dash-toolbar{
+      display:grid;
+      grid-template-columns: 1fr auto;
+      gap: 12px;
+      align-items:center;
+    }
+    .dash-toolbar-left{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      flex-wrap:wrap;
+      margin:0;
+    }
+    .dash-toolbar-right{
+      display:flex;
+      gap:10px;
+      flex-wrap:wrap;
+      justify-content:flex-end;
+      align-items:center;
+    }
+    @media (max-width: 820px){
+      .dash-toolbar{ grid-template-columns: 1fr; }
+      .dash-toolbar-right{ justify-content:flex-start; }
+    }
+  </style>
+
+  <!-- CARDS RESUMEN -->
+  <div class="grid" style="margin-top:12px;">
+    <div class="card">
+      <div class="muted">💰 Ingresos (mes)</div>
+      <div style="font-size:26px;" class="money">$ {{ total_ingresos|floatformat:0|intcomma }}</div>
+      <div class="muted" style="margin-top:6px;">
+        vs mes anterior:
+        {% if ingresos_var_pct is None %}
+          —
+        {% else %}
+          {% if ingresos_var_pct >= 0 %}↑{% else %}↓{% endif %}
+          {{ ingresos_var_pct|floatformat:1 }}%
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="muted">🧾 Gastos (mes)</div>
+      <div style="font-size:26px;" class="money">$ {{ total_gastos|floatformat:0|intcomma }}</div>
+      <div class="muted" style="margin-top:6px;">
+        vs mes anterior:
+        {% if gastos_var_pct is None %}
+          —
+        {% else %}
+          {% if gastos_var_pct >= 0 %}↑{% else %}↓{% endif %}
+          {{ gastos_var_pct|floatformat:1 }}%
+        {% endif %}
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="muted">📊 Balance (mes)</div>
+      <div style="font-size:26px;"
+           class="money {% if balance >= 0 %}money-pos{% else %}money-neg{% endif %}">
+        $ {{ balance|floatformat:0|intcomma }}
+      </div>
+      <div class="muted" style="margin-top:6px;">
+        Tasa de ahorro:
+        {% if tasa_ahorro is None %}
+          —
+        {% else %}
+          {{ tasa_ahorro|floatformat:1 }}%
+        {% endif %}
+      </div>
+    </div>
+  </div>
+
+  <!-- TABLAS -->
+  <div class="grid" style="grid-template-columns: 2fr 1fr; margin-top:12px;">
+
+    <div class="card">
+      <h3 style="margin-top:0;">Movimientos del mes</h3>
+      <div class="table-wrap">
+        <table>
+          <thead>
+            <tr>
+              <th>Fecha</th>
+              <th>Tipo</th>
+              <th>Categoría</th>
+              <th class="td-right">Monto</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for m in ultimos %}
+              <tr>
+                <td>{{ m.fecha }}</td>
+                <td>
+                  {% if m.tipo == "INGRESO" %}
+                    <span class="badge badge-ingreso">⬆ Ingreso</span>
+                  {% else %}
+                    <span class="badge badge-gasto">⬇ Gasto</span>
+                  {% endif %}
+                </td>
+                <td>{{ m.categoria.nombre }}</td>
+                <td class="money td-right">$ {{ m.monto|floatformat:0|intcomma }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="4" class="muted">No hay movimientos en este mes.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+    <div class="card">
+      <h3 style="margin-top:0;">Top 5 gastos del mes</h3>
+
+      <div class="table-wrap">
+        <table style="min-width:520px;">
+          <thead>
+            <tr>
+              <th>Categoría</th>
+              <th class="td-right">Monto</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for g in top_gastos %}
+              <tr>
+                <td>{{ g.categoria.nombre }}</td>
+                <td class="money td-right">$ {{ g.monto|floatformat:0|intcomma }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="2" class="muted">Sin gastos este mes.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+
+      <h3 style="margin-top:14px;">Gastos por categoría</h3>
+      <div class="table-wrap">
+        <table style="min-width:520px;">
+          <thead>
+            <tr>
+              <th>Categoría</th>
+              <th class="td-right">Total</th>
+            </tr>
+          </thead>
+          <tbody>
+            {% for c in gastos_por_categoria %}
+              <tr>
+                <td>{{ c.categoria__nombre }}</td>
+                <td class="money td-right">$ {{ c.total|floatformat:0|intcomma }}</td>
+              </tr>
+            {% empty %}
+              <tr><td colspan="2" class="muted">Sin gastos este mes.</td></tr>
+            {% endfor %}
+          </tbody>
+        </table>
+      </div>
+    </div>
+
+  </div>
+
+  <style>
+    @media (max-width: 980px){
+      .grid[style*="grid-template-columns: 2fr 1fr"]{
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
+
+{% endblock %}

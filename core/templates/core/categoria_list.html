@@ -1,0 +1,100 @@
+{% extends "core/base.html" %}
+{% block content %}
+
+  <div style="display:flex; gap:12px; flex-wrap:wrap; justify-content:space-between; align-items:flex-start; margin-bottom:12px;">
+    <div>
+      <h2 style="margin:0;">📁 Categorías</h2>
+      <p class="muted" style="margin-top:6px; margin-bottom:0;">Administra tus categorías para ingresos y gastos.</p>
+    </div>
+
+    <div style="display:flex; gap:10px; flex-wrap:wrap;">
+      <a class="btn btn2" href="{% url 'core:dashboard' %}">Volver al dashboard</a>
+      <a class="btn" href="{% url 'core:movimiento_nuevo' %}">+ Nuevo movimiento</a>
+    </div>
+  </div>
+
+  <div class="grid" style="grid-template-columns: 1.4fr 1fr;">
+    <!-- Lista -->
+    <div class="card">
+      <h3 style="margin-top:0;">Listado</h3>
+
+      <table>
+        <thead>
+          <tr>
+            <th>Nombre</th>
+            <th>Tipo</th>
+          </tr>
+        </thead>
+        <tbody>
+          {% for c in categorias %}
+            <tr>
+              <td><strong>{{ c.nombre }}</strong></td>
+              <td>
+                {% if c.tipo == "INGRESO" %}
+                  <span class="badge badge-ingreso">⬆ Ingreso</span>
+                {% elif c.tipo == "GASTO" %}
+                  <span class="badge badge-gasto">⬇ Gasto</span>
+                {% else %}
+                  <span class="badge">↔ Ambos</span>
+                {% endif %}
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="2" class="muted">No tienes categorías.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+
+      <div class="muted" style="margin-top:10px;">
+        Tip: Mantén pocas categorías y bien claras (se vuelve más fácil revisar el mes).
+      </div>
+    </div>
+
+    <!-- Crear -->
+    <div class="card">
+      <h3 style="margin-top:0;">➕ Crear categoría</h3>
+      <p class="muted" style="margin-top:6px;">Agrega una categoría nueva para ordenar mejor tus registros.</p>
+
+      <form method="post" action="{% url 'core:categoria_nueva_rapida' %}" style="margin-top:12px;">
+        {% csrf_token %}
+
+        <div style="display:grid; gap:12px;">
+          <div>
+            <label>Nombre</label>
+            <input name="nombre" required placeholder="Ej: Supermercado, Luz, Sueldo...">
+          </div>
+
+          <div>
+            <label>Tipo</label>
+            <select name="tipo">
+              <option value="AMBOS">Ambos</option>
+              <option value="GASTO">Gasto</option>
+              <option value="INGRESO">Ingreso</option>
+            </select>
+          </div>
+        </div>
+
+        <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:16px;">
+          <button class="btn" type="submit">Guardar</button>
+          <a class="btn btn2" href="{% url 'core:dashboard' %}">Volver</a>
+        </div>
+      </form>
+
+      <div class="card" style="margin-top:14px; border-color: rgba(96,165,250,.25); background: rgba(96,165,250,.06);">
+        <strong>Idea rápida</strong>
+        <div class="muted" style="margin-top:6px;">
+          Si una categoría sirve para ambos, déjala en “Ambos” (por ejemplo: “Transferencias”).
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <style>
+    @media (max-width: 880px){
+      .grid[style*="grid-template-columns"]{
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
+
+{% endblock %}

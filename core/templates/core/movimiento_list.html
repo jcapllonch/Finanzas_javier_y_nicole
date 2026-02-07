@@ -1,0 +1,47 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block content %}
+  <div class="card">
+    <h2 style="margin:0 0 10px;">Movimientos</h2>
+    <a class="btn" href="{% url 'core:movimiento_nuevo' %}">+ Nuevo</a>
+
+    <div class="table-wrap" style="margin-top:10px;">
+      <table>
+        <thead>
+          <tr>
+            <th>Fecha</th>
+            <th>Tipo</th>
+            <th>Categoría</th>
+            <th class="td-right">Monto</th>
+            <th>Descripción</th>
+            <th>Acciones</th>
+          </tr>
+        </thead>
+
+        <tbody>
+          {% for m in movimientos %}
+            <tr>
+              <td>{{ m.fecha }}</td>
+              <td>
+                {% if m.tipo == "INGRESO" %}
+                  <span class="badge badge-ingreso">⬆ Ingreso</span>
+                {% else %}
+                  <span class="badge badge-gasto">⬇ Gasto</span>
+                {% endif %}
+              </td>
+              <td>{{ m.categoria.nombre }}</td>
+              <td class="money td-right">$ {{ m.monto|floatformat:0|intcomma }}</td>
+              <td>{{ m.descripcion }}</td>
+              <td style="white-space:nowrap;">
+                <a class="btn btn2" href="{% url 'core:movimiento_editar' m.id %}">Editar</a>
+                <a class="btn btn-danger" href="{% url 'core:movimiento_eliminar' m.id %}">Eliminar</a>
+              </td>
+            </tr>
+          {% empty %}
+            <tr><td colspan="6" class="muted">Sin movimientos.</td></tr>
+          {% endfor %}
+        </tbody>
+      </table>
+    </div>
+  </div>
+{% endblock %}

@@ -1,0 +1,1 @@
+web: gunicorn finanzas_javier_y_nicole.wsgi:application

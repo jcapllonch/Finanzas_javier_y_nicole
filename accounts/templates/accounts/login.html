@@ -1,0 +1,53 @@
+{% extends "core/base.html" %}
+{% block content %}
+
+  <div class="card" style="max-width:520px; margin:0 auto;">
+    <h2 style="margin-top:0;">🔐 Entrar</h2>
+    <p class="muted" style="margin-top:6px;">
+      Ingresa con tu usuario para acceder a <strong>Finanzas Javier y Nicole</strong>.
+    </p>
+
+    <form method="post" style="margin-top:16px;">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="card" style="border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.08); margin-bottom:12px;">
+          <strong>⚠️ No se pudo ingresar</strong>
+          <div class="muted" style="margin-top:6px;">
+            {{ form.non_field_errors }}
+          </div>
+        </div>
+      {% endif %}
+
+      <div style="display:grid; gap:14px;">
+
+        <div>
+          <label>Usuario</label>
+          {{ form.username }}
+          {% if form.username.errors %}
+            <div class="muted" style="color:#fca5a5; margin-top:6px;">{{ form.username.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div>
+          <label>Contraseña</label>
+          {{ form.password }}
+          {% if form.password.errors %}
+            <div class="muted" style="color:#fca5a5; margin-top:6px;">{{ form.password.errors }}</div>
+          {% endif %}
+        </div>
+
+      </div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;">
+        <button class="btn" type="submit">Ingresar</button>
+        <a class="btn btn2" href="{% url 'accounts:signup' %}">Crear cuenta</a>
+      </div>
+
+      <div class="muted" style="margin-top:14px;">
+        Tip: cada usuario ve solo sus propios movimientos.
+      </div>
+    </form>
+  </div>
+
+{% endblock %}

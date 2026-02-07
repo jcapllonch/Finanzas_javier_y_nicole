@@ -1,0 +1,60 @@
+{% extends "core/base.html" %}
+{% block content %}
+
+  <div class="card" style="max-width:520px; margin:0 auto;">
+    <h2 style="margin-top:0;">👤 Crear cuenta</h2>
+    <p class="muted" style="margin-top:6px;">
+      Crea tu usuario para registrar tus ingresos y gastos en <strong>Finanzas Javier y Nicole</strong>.
+    </p>
+
+    <form method="post" style="margin-top:16px;">
+      {% csrf_token %}
+
+      {% if form.non_field_errors %}
+        <div class="card" style="border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.08); margin-bottom:12px;">
+          <strong>⚠️ Revisa esto:</strong>
+          <div class="muted" style="margin-top:6px;">
+            {{ form.non_field_errors }}
+          </div>
+        </div>
+      {% endif %}
+
+      <div style="display:grid; gap:14px;">
+
+        <div>
+          <label>Usuario</label>
+          {{ form.username }}
+          {% if form.username.errors %}
+            <div class="muted" style="color:#fca5a5; margin-top:6px;">{{ form.username.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div>
+          <label>Contraseña</label>
+          {{ form.password1 }}
+          {% if form.password1.errors %}
+            <div class="muted" style="color:#fca5a5; margin-top:6px;">{{ form.password1.errors }}</div>
+          {% endif %}
+          <div class="muted" style="margin-top:6px;">
+            Usa una contraseña que puedas recordar, pero que no sea obvia.
+          </div>
+        </div>
+
+        <div>
+          <label>Confirmar contraseña</label>
+          {{ form.password2 }}
+          {% if form.password2.errors %}
+            <div class="muted" style="color:#fca5a5; margin-top:6px;">{{ form.password2.errors }}</div>
+          {% endif %}
+        </div>
+
+      </div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;">
+        <button class="btn" type="submit">Registrarme</button>
+        <a class="btn btn2" href="{% url 'accounts:login' %}">Ya tengo cuenta</a>
+      </div>
+    </form>
+  </div>
+
+{% endblock %}

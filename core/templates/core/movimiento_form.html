@@ -1,0 +1,96 @@
+{% extends "core/base.html" %}
+
+{% block content %}
+  <div class="card" style="max-width:900px; margin:0 auto;">
+    
+    {% if editando %}
+      <h2 style="margin-top:0;">✏️ Editar movimiento</h2>
+      <p class="muted" style="margin-top:6px;">Modifica los datos y guarda los cambios.</p>
+    {% else %}
+      <h2 style="margin-top:0;">➕ Nuevo movimiento</h2>
+      <p class="muted" style="margin-top:6px;">Registra un ingreso o gasto en tu historial.</p>
+    {% endif %}
+
+    <form method="post" style="margin-top:16px;">
+      {% csrf_token %}
+
+      <!-- errores generales -->
+      {% if form.non_field_errors %}
+        <div class="card" style="border-color: rgba(239,68,68,.35); background: rgba(239,68,68,.08); margin-bottom:12px;">
+          <strong>⚠️ Revisa esto:</strong>
+          <div class="muted" style="margin-top:6px;">
+            {{ form.non_field_errors }}
+          </div>
+        </div>
+      {% endif %}
+
+      <div style="display:grid; grid-template-columns: 1fr 1fr; gap:14px;">
+        
+        <div>
+          <label>{{ form.tipo.label }}</label>
+          {{ form.tipo }}
+          {% if form.tipo.errors %}
+            <div class="muted" style="color:#fca5a5; margin-top:6px;">{{ form.tipo.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div>
+          <label>{{ form.categoria.label }}</label>
+          {{ form.categoria }}
+          {% if form.categoria.errors %}
+            <div class="muted" style="color:#fca5a5; margin-top:6px;">{{ form.categoria.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div>
+          <label>{{ form.monto.label }}</label>
+          {{ form.monto }}
+          {% if form.monto.errors %}
+            <div class="muted" style="color:#fca5a5; margin-top:6px;">{{ form.monto.errors }}</div>
+          {% endif %}
+        </div>
+
+        <div>
+          <label>{{ form.fecha.label }}</label>
+          {{ form.fecha }}
+          {% if form.fecha.errors %}
+            <div class="muted" style="color:#fca5a5; margin-top:6px;">{{ form.fecha.errors }}</div>
+          {% endif %}
+        </div>
+
+      </div>
+
+      <div style="margin-top:14px;">
+        <label>{{ form.descripcion.label }}</label>
+        {{ form.descripcion }}
+        {% if form.descripcion.errors %}
+          <div class="muted" style="color:#fca5a5; margin-top:6px;">{{ form.descripcion.errors }}</div>
+        {% endif %}
+      </div>
+
+      <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:18px;">
+        <button class="btn" type="submit">
+          {% if editando %}Guardar cambios{% else %}Guardar{% endif %}
+        </button>
+
+        <a class="btn btn2" href="{% url 'core:dashboard' %}">Volver</a>
+
+        {% if editando %}
+          <a class="btn btn-danger" href="{% url 'core:movimiento_eliminar' form.instance.id %}">
+            Eliminar
+          </a>
+        {% endif %}
+      </div>
+
+    </form>
+  </div>
+
+  <style>
+    /* En móvil, que sea 1 columna */
+    @media (max-width: 800px){
+      form > div[style*="grid-template-columns"]{
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
+{% endblock %}
