@@ -27,7 +27,9 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-ajkdajkdkjasndkjasdnkaslka
 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = os.getenv("DEBUG", "False") == "True"
+
+DEBUG = os.getenv("DEBUG", "False").strip().lower() in ("true", "1", "yes", "y")
+
 
 ALLOWED_HOSTS = ["127.0.0.1", "localhost", ".onrender.com"]
 
