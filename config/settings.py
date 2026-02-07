@@ -29,8 +29,9 @@ SECRET_KEY = os.getenv("SECRET_KEY", "django-insecure-ajkdajkdkjasndkjasdnkaslka
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = os.getenv("DEBUG", "False") == "True"
 
-ALLOWED_HOSTS = [["127.0.0.1", "localhost", ".onrender.com"]]
+ALLOWED_HOSTS = ["127.0.0.1", "localhost", ".onrender.com"]
 
+CSRF_TRUSTED_ORIGINS = ["https://*.onrender.com"]
 
 # Application definition
 
@@ -44,6 +45,7 @@ INSTALLED_APPS = [
     "accounts.apps.AccountsConfig",
     "core",
     "django.contrib.humanize",
+    "accounts",
 ]
 
 MIDDLEWARE = [
