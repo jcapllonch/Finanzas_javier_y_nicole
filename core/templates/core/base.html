@@ -355,7 +355,6 @@
         </div>
       </a>
 
-      <!-- ✅ Header simplificado: solo Hola + Salir -->
       <div class="row" style="justify-content:flex-end;">
         {% if user.is_authenticated %}
           <span class="muted">Hola, <strong>{{ user.username }}</strong></span>
@@ -375,7 +374,7 @@
     <a class="fab" href="{% url 'core:movimiento_nuevo' %}" aria-label="Nuevo movimiento" title="Nuevo movimiento">
       <span>+</span>
     </a>
-    
+
     <nav class="mobile-bar" aria-label="Navegación">
       <a class="mobile-tab" href="{% url 'accounts:logout' %}">🚪 <small>Salir</small></a>
     </nav>
