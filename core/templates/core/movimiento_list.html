@@ -2,11 +2,18 @@
 {% load humanize %}
 {% block content %}
   <div class="card">
-    <h2 style="margin:0 0 10px;">Movimientos</h2>
-    <a class="btn" href="{% url 'core:movimiento_nuevo' %}">+ Nuevo</a>
+    <div style="display:flex; gap:10px; justify-content:space-between; align-items:flex-start; flex-wrap:wrap;">
+      <div>
+        <h2 style="margin:0 0 6px;">Movimientos</h2>
+        <p class="muted" style="margin:0;">Lista completa de ingresos y gastos.</p>
+      </div>
+      <a class="btn" href="{% url 'core:movimiento_nuevo' %}">+ Nuevo</a>
+    </div>
 
-    <div class="table-wrap" style="margin-top:10px;">
-      <table>
+    <div class="spacer"></div>
+
+    <div class="table-wrap">
+      <table class="responsive" style="margin-top:10px;">
         <thead>
           <tr>
             <th>Fecha</th>
@@ -21,24 +28,35 @@
         <tbody>
           {% for m in movimientos %}
             <tr>
-              <td>{{ m.fecha }}</td>
-              <td>
+              <td data-label="Fecha">{{ m.fecha }}</td>
+
+              <td data-label="Tipo">
                 {% if m.tipo == "INGRESO" %}
                   <span class="badge badge-ingreso">⬆ Ingreso</span>
                 {% else %}
                   <span class="badge badge-gasto">⬇ Gasto</span>
                 {% endif %}
               </td>
-              <td>{{ m.categoria.nombre }}</td>
-              <td class="money td-right">$ {{ m.monto|floatformat:0|intcomma }}</td>
-              <td>{{ m.descripcion }}</td>
-              <td style="white-space:nowrap;">
+
+              <td data-label="Categoría">{{ m.categoria.nombre }}</td>
+
+              <td data-label="Monto" class="money td-right">
+                $ {{ m.monto|floatformat:0|intcomma }}
+              </td>
+
+              <td data-label="Descripción">
+                {% if m.descripcion %}{{ m.descripcion }}{% else %}<span class="muted">—</span>{% endif %}
+              </td>
+
+              <td data-label="Acciones" class="actions">
                 <a class="btn btn2" href="{% url 'core:movimiento_editar' m.id %}">Editar</a>
                 <a class="btn btn-danger" href="{% url 'core:movimiento_eliminar' m.id %}">Eliminar</a>
               </td>
             </tr>
           {% empty %}
-            <tr><td colspan="6" class="muted">Sin movimientos.</td></tr>
+            <tr>
+              <td data-label="Info" colspan="6" class="muted">Sin movimientos.</td>
+            </tr>
           {% endfor %}
         </tbody>
       </table>
