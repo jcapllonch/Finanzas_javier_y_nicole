@@ -234,6 +234,7 @@ def asistente_preguntar(request):
     resumen = _get_dashboard_aggregates(request.user, anio, mes)
 
     api_key = (os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY") or "").strip()
+    print("[IA] GEMINI_API_KEY cargada:", "SI" if api_key else "NO")
     if not api_key:
         return JsonResponse({"ok": False, "error": "Falta GEMINI_API_KEY en variables de entorno"}, status=500)
 
