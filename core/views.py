@@ -239,8 +239,9 @@ def asistente_preguntar(request):
 
     # Config Gemini
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-1.0-pro")  # rápido y barato (ideal)
+    model_name = os.getenv("GEMINI_MODEL", "gemini-1.0-pro").strip()  # rápido y barato (ideal)
 
+    model = genai.GenerativeModel(model_name)
     system_style = f"""
 Eres un asistente financiero CASERO para Chile.
 Hablas en español chileno neutro, claro y amable.
@@ -272,6 +273,7 @@ PREGUNTA DEL USUARIO:
 """
 
     try:
+        print(f"[IA] Gemini model usado: {model_name}")
         resp = model.generate_content(prompt)
         texto = (resp.text or "").strip()
         if not texto:
