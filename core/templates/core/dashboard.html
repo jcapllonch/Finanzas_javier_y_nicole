@@ -16,66 +16,214 @@
     </div>
 
     <div style="display:flex; gap:10px; flex-wrap:wrap;">
-      <a class="btn btn-sm" href="{% url 'core:movimiento_nuevo' %}">+ Nuevo</a>
-      <a class="btn btn2 btn-sm" href="{% url 'core:movimientos' %}">Movimientos</a>
-      <a class="btn btn2 btn-sm" href="{% url 'core:categorias' %}">Categorías</a>
+      <a class="btn" href="{% url 'core:movimiento_nuevo' %}">+ Nuevo movimiento</a>
+      <a class="btn btn2" href="{% url 'core:movimientos' %}">Ver movimientos</a>
+      <a class="btn btn2" href="{% url 'core:categorias' %}">Categorías</a>
     </div>
   </div>
 
-  <!-- TOOLBAR UNIFORME -->
-  <div class="card" style="margin-top:12px; padding:12px;">
-    <div class="dash-toolbar">
-      <form method="get" class="dash-toolbar-left">
-        <label class="muted">Mes</label>
-        <select name="mes" style="width:auto; min-width:190px;">
-          {% for num, nombre in meses %}
-            <option value="{{ num }}" {% if num == mes %}selected{% endif %}>{{ nombre }}</option>
-          {% endfor %}
-        </select>
-
-        <label class="muted">Año</label>
-        <select name="anio" style="width:auto; min-width:130px;">
-          {% for a in anios %}
-            <option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>
-          {% endfor %}
-        </select>
-
-        <button class="btn btn-sm" type="submit">Ver</button>
-      </form>
-
-      <div class="dash-toolbar-right">
-        <a class="btn btn2 btn-sm" href="/?mes={{ mes_prev }}&anio={{ anio_prev }}">← Anterior</a>
-        <a class="btn btn2 btn-sm" href="/?mes={{ mes_next }}&anio={{ anio_next }}">Siguiente →</a>
+  <!-- CHAT IA (SOLO EN DASHBOARD) -->
+  <div class="card" style="margin-top:12px;">
+    <div style="display:flex; gap:10px; align-items:center; justify-content:space-between; flex-wrap:wrap;">
+      <div>
+        <h3 style="margin:0;">🤖 Asistente</h3>
+        <p class="muted" style="margin:6px 0 0;">Pregunta lo que quieras (ej: “¿Cómo voy este mes?” o “¿En qué podría ahorrar?”)</p>
       </div>
+      <button class="btn btn2" type="button" id="btnClearChat">Limpiar</button>
     </div>
-  </div>
 
-  <style>
-    .dash-toolbar{
-      display:grid;
-      grid-template-columns: 1fr auto;
-      gap: 12px;
-      align-items:center;
-    }
-    .dash-toolbar-left{
-      display:flex;
-      gap:10px;
-      align-items:center;
-      flex-wrap:wrap;
-      margin:0;
-    }
-    .dash-toolbar-right{
-      display:flex;
-      gap:10px;
-      flex-wrap:wrap;
-      justify-content:flex-end;
-      align-items:center;
-    }
-    @media (max-width: 820px){
-      .dash-toolbar{ grid-template-columns: 1fr; }
-      .dash-toolbar-right{ justify-content:flex-start; }
-    }
-  </style>
+    <div id="chatBox" class="chat-box" aria-live="polite"></div>
+
+    <form id="chatForm" class="chat-form" autocomplete="off">
+      {% csrf_token %}
+      <input
+        id="chatInput"
+        name="mensaje"
+        placeholder="Escribe tu pregunta…"
+        required
+      />
+      <button class="btn" type="submit" id="chatSend">Enviar</button>
+    </form>
+
+    <div class="muted" id="chatStatus" style="margin-top:10px;"></div>
+
+    <style>
+      .chat-box{
+        margin-top: 14px;
+        height: 320px;
+        overflow-y: auto;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(0,0,0,.12);
+        padding: 12px;
+      }
+      .msg{
+        display:flex;
+        gap:10px;
+        margin: 10px 0;
+        align-items:flex-start;
+      }
+      .bubble{
+        max-width: 860px;
+        padding: 10px 12px;
+        border-radius: 16px;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,.06);
+        line-height: 1.35;
+        white-space: pre-wrap;
+        word-break: break-word;
+      }
+      .me .bubble{
+        border-color: rgba(96,165,250,.35);
+        background: rgba(96,165,250,.10);
+      }
+      .ai .bubble{
+        border-color: rgba(34,197,94,.25);
+        background: rgba(34,197,94,.08);
+      }
+      .tag{
+        font-weight: 900;
+        font-size: 12px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--line);
+        background: rgba(255,255,255,.05);
+        color: rgba(226,232,240,.95);
+        white-space: nowrap;
+      }
+      .me .tag{ border-color: rgba(96,165,250,.35); }
+      .ai .tag{ border-color: rgba(34,197,94,.25); }
+
+      .chat-form{
+        margin-top: 12px;
+        display:flex;
+        gap: 10px;
+        align-items:center;
+      }
+      .chat-form input{
+        flex: 1 1 auto;
+      }
+
+      @media (max-width: 720px){
+        .chat-box{ height: 360px; }
+        .chat-form{ flex-direction: column; align-items: stretch; }
+        .chat-form button{ width: 100%; }
+      }
+    </style>
+
+    <script>
+      (function(){
+        const chatBox = document.getElementById("chatBox");
+        const chatForm = document.getElementById("chatForm");
+        const chatInput = document.getElementById("chatInput");
+        const chatSend = document.getElementById("chatSend");
+        const chatStatus = document.getElementById("chatStatus");
+        const btnClear = document.getElementById("btnClearChat");
+
+        const storageKey = "fjyn_chat_history_v1";
+
+        function escapeHtml(text){
+          return (text ?? "").replace(/[&<>"']/g, (m) => ({
+            "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+          }[m]));
+        }
+
+        function addMsg(role, text){
+          const wrap = document.createElement("div");
+          wrap.className = "msg " + role;
+
+          const tag = document.createElement("div");
+          tag.className = "tag";
+          tag.textContent = role === "me" ? "Tú" : "Asistente";
+
+          const bubble = document.createElement("div");
+          bubble.className = "bubble";
+          bubble.innerHTML = escapeHtml(text);
+
+          wrap.appendChild(tag);
+          wrap.appendChild(bubble);
+          chatBox.appendChild(wrap);
+
+          chatBox.scrollTop = chatBox.scrollHeight;
+        }
+
+        function loadHistory(){
+          try{
+            const raw = localStorage.getItem(storageKey);
+            if(!raw) return;
+            const arr = JSON.parse(raw);
+            if(!Array.isArray(arr)) return;
+            arr.forEach(m => addMsg(m.role, m.text));
+          }catch(e){}
+        }
+
+        function saveToHistory(role, text){
+          try{
+            const raw = localStorage.getItem(storageKey);
+            const arr = raw ? JSON.parse(raw) : [];
+            arr.push({role, text, t: Date.now()});
+            localStorage.setItem(storageKey, JSON.stringify(arr.slice(-50)));
+          }catch(e){}
+        }
+
+        function clearHistory(){
+          localStorage.removeItem(storageKey);
+          chatBox.innerHTML = "";
+          addMsg("ai", "Hola 👋 Soy tu asistente. Pregúntame por tu mes, tus gastos o ideas para ahorrar.");
+        }
+
+        btnClear.addEventListener("click", clearHistory);
+
+        // mensaje inicial si no hay historial
+        loadHistory();
+        if(chatBox.children.length === 0){
+          addMsg("ai", "Hola 👋 Soy tu asistente. Pregúntame por tu mes, tus gastos o ideas para ahorrar.");
+        }
+
+        chatForm.addEventListener("submit", async (e) => {
+          e.preventDefault();
+          const msg = chatInput.value.trim();
+          if(!msg) return;
+
+          chatInput.value = "";
+          chatInput.focus();
+
+          addMsg("me", msg);
+          saveToHistory("me", msg);
+
+          chatStatus.textContent = "Pensando…";
+          chatSend.disabled = true;
+
+          try{
+            const res = await fetch("{% url 'core:asistente_preguntar' %}", {
+              method: "POST",
+              headers: {
+                "Content-Type": "application/json",
+                "X-CSRFToken": (document.querySelector('input[name="csrfmiddlewaretoken"]') || {}).value || ""
+              },
+              body: JSON.stringify({ mensaje: msg })
+            });
+
+            const data = await res.json();
+            if(!res.ok || !data.ok){
+              const err = data && (data.error || data.detail) ? (data.error || data.detail) : "Error desconocido";
+              addMsg("ai", "⚠️ " + err);
+              saveToHistory("ai", "⚠️ " + err);
+            }else{
+              addMsg("ai", data.respuesta || "(sin respuesta)");
+              saveToHistory("ai", data.respuesta || "(sin respuesta)");
+            }
+          }catch(err){
+            addMsg("ai", "⚠️ Error de red. Intenta nuevamente.");
+            saveToHistory("ai", "⚠️ Error de red. Intenta nuevamente.");
+          }finally{
+            chatStatus.textContent = "";
+            chatSend.disabled = false;
+          }
+        });
+      })();
+    </script>
+  </div>
 
   <!-- CARDS RESUMEN -->
   <div class="grid" style="margin-top:12px;">
@@ -127,6 +275,7 @@
   <!-- TABLAS -->
   <div class="grid" style="grid-template-columns: 2fr 1fr; margin-top:12px;">
 
+    <!-- Movimientos del mes -->
     <div class="card">
       <h3 style="margin-top:0;">Movimientos del mes</h3>
       <div class="table-wrap">
@@ -161,11 +310,11 @@
       </div>
     </div>
 
+    <!-- Top + Por categoría -->
     <div class="card">
       <h3 style="margin-top:0;">Top 5 gastos del mes</h3>
-
       <div class="table-wrap">
-        <table style="min-width:520px;">
+        <table>
           <thead>
             <tr>
               <th>Categoría</th>
@@ -187,7 +336,7 @@
 
       <h3 style="margin-top:14px;">Gastos por categoría</h3>
       <div class="table-wrap">
-        <table style="min-width:520px;">
+        <table>
           <thead>
             <tr>
               <th>Categoría</th>
