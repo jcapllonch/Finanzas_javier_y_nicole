@@ -239,6 +239,8 @@ def asistente_preguntar(request):
 
     # Config Gemini
     model_name = (os.getenv("GEMINI_MODEL") or "models/gemini-2.0-flash").strip()
+    if not model_name.startswith("models/"):
+        model_name = "models/" + model_name
     print(f"[IA] Modelo Gemini usado: {model_name}")
     model = genai.GenerativeModel(model_name)
 
