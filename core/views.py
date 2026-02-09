@@ -1,11 +1,15 @@
 from datetime import date
-
+import os
 from django.contrib.auth.decorators import login_required
 from django.db.models import Sum
 from django.shortcuts import render, redirect, get_object_or_404
-
+import json
 from .models import Movimiento, Categoria
 from .forms import MovimientoForm
+from django.http import JsonResponse
+from django.views.decorators.http import require_POST
+from django.views.decorators.csrf import csrf_protect
+import google.generativeai as genai
 
 
 MESES = [
@@ -164,3 +168,114 @@ def movimiento_eliminar(request, pk):
         return redirect("core:movimientos")
 
     return render(request, "core/movimiento_confirm_delete.html", {"mov": mov})
+
+def _get_dashboard_aggregates(user, anio, mes):
+    qs_mes = Movimiento.objects.filter(user=user, fecha__year=anio, fecha__month=mes)
+
+    total_ingresos = float(qs_mes.filter(tipo="INGRESO").aggregate(s=Sum("monto"))["s"] or 0)
+    total_gastos = float(qs_mes.filter(tipo="GASTO").aggregate(s=Sum("monto"))["s"] or 0)
+    balance = total_ingresos - total_gastos
+    tasa_ahorro = None
+    if total_ingresos != 0:
+        tasa_ahorro = (balance / total_ingresos) * 100.0
+
+    gastos_por_categoria = list(
+        qs_mes.filter(tipo="GASTO")
+        .values("categoria__nombre")
+        .annotate(total=Sum("monto"))
+        .order_by("-total")[:8]
+    )
+    # serializable
+    top_cats = [{"categoria": x["categoria__nombre"], "total": float(x["total"] or 0)} for x in gastos_por_categoria]
+
+    return {
+        "anio": int(anio),
+        "mes": int(mes),
+        "total_ingresos": total_ingresos,
+        "total_gastos": total_gastos,
+        "balance": balance,
+        "tasa_ahorro": tasa_ahorro,
+        "top_gastos_categoria": top_cats,
+    }
+
+
+@login_required
+def asistente(request):
+    """
+    Página del chat. Solo renderiza el template.
+    """
+    return render(request, "core/asistente.html")
+
+
+@require_POST
+@csrf_protect
+@login_required
+def asistente_preguntar(request):
+    """
+    Endpoint AJAX: recibe una pregunta y devuelve respuesta de Gemini.
+    Solo envía datos agregados del mes/año (no movimientos).
+    """
+    try:
+        data = json.loads(request.body.decode("utf-8"))
+    except Exception:
+        return JsonResponse({"ok": False, "error": "JSON inválido"}, status=400)
+
+    pregunta = (data.get("pregunta") or "").strip()
+    if not pregunta:
+        return JsonResponse({"ok": False, "error": "Escribe una pregunta"}, status=400)
+
+    # Mes/año opcional (si no viene, usa actuales)
+    from datetime import date
+    hoy = date.today()
+    mes = int(data.get("mes") or hoy.month)
+    anio = int(data.get("anio") or hoy.year)
+
+    # Datos agregados
+    resumen = _get_dashboard_aggregates(request.user, anio, mes)
+
+    api_key = os.getenv("GEMINI_API_KEY", "")
+    if not api_key:
+        return JsonResponse({"ok": False, "error": "Falta GEMINI_API_KEY en variables de entorno"}, status=500)
+
+    # Config Gemini
+    genai.configure(api_key=api_key)
+    model = genai.GenerativeModel("gemini-1.5-flash")  # rápido y barato (ideal)
+
+    system_style = f"""
+Eres un asistente financiero CASERO para Chile.
+Hablas en español chileno neutro, claro y amable.
+No das asesoría legal/tributaria profesional. Das orientación general.
+NO pidas ni reveles datos sensibles. No inventes montos.
+Si falta info, pregunta 1 cosa concreta.
+Entrega respuestas en formato:
+- Resumen (1-2 líneas)
+- Consejos (3 bullets)
+- Siguiente paso (1 acción)
+"""
+
+    context = f"""
+DATOS AGREGADOS DEL USUARIO (NO SON MOVIMIENTOS DETALLADOS):
+Año: {resumen["anio"]}, Mes: {resumen["mes"]}
+Total ingresos: {resumen["total_ingresos"]}
+Total gastos: {resumen["total_gastos"]}
+Balance: {resumen["balance"]}
+Tasa ahorro (%): {resumen["tasa_ahorro"]}
+Top gastos por categoría (máx 8): {resumen["top_gastos_categoria"]}
+"""
+
+    prompt = f"""{system_style}
+
+{context}
+
+PREGUNTA DEL USUARIO:
+{pregunta}
+"""
+
+    try:
+        resp = model.generate_content(prompt)
+        texto = (resp.text or "").strip()
+        if not texto:
+            texto = "No pude generar una respuesta. Intenta de nuevo con otra pregunta."
+        return JsonResponse({"ok": True, "respuesta": texto, "resumen": resumen})
+    except Exception as e:
+        return JsonResponse({"ok": False, "error": f"Error llamando a Gemini: {str(e)}"}, status=500)

@@ -14,4 +14,6 @@ urlpatterns = [
 
     path("categorias/", views.categorias_list, name="categorias"),
     path("categorias/nueva-rapida/", views.categoria_crear_rapida, name="categoria_nueva_rapida"),
+        path("asistente/", views.asistente, name="asistente"),
+    path("asistente/preguntar/", views.asistente_preguntar, name="asistente_preguntar"),
 ]

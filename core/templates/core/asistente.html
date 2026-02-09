@@ -1,0 +1,168 @@
+{% extends "core/base.html" %}
+{% load humanize %}
+{% block content %}
+
+<div class="card" style="max-width:980px; margin:0 auto;">
+  <div style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-start; justify-content:space-between;">
+    <div>
+      <h2 style="margin:0;">🤖 Asistente (Gemini)</h2>
+      <p class="muted" style="margin:6px 0 0;">
+        Te ayuda con dudas financieras usando <strong>solo datos agregados</strong> del mes (no movimientos detalle).
+      </p>
+    </div>
+    <a class="btn btn2" href="{% url 'core:dashboard' %}">Volver</a>
+  </div>
+
+  <div class="spacer"></div>
+
+  <div class="card" style="background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.10);">
+    <div id="chat" style="display:flex; flex-direction:column; gap:10px; max-height:420px; overflow:auto; padding-right:6px;">
+      <div style="padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.05);">
+        <div style="font-weight:900;">Asistente</div>
+        <div class="muted" style="margin-top:6px;">
+          Pregúntame cosas como: “¿Cómo voy este mes?” “¿En qué recortar gastos?” “¿Qué significa tasa de ahorro?”
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <div class="spacer"></div>
+
+  <div style="display:grid; grid-template-columns: 1fr 200px 200px; gap:12px;">
+    <div>
+      <label class="muted">Tu pregunta</label>
+      <input id="pregunta" placeholder="Ej: Dame 3 consejos para gastar menos este mes" />
+      <div id="err" class="muted" style="color:#fca5a5; margin-top:6px; display:none;"></div>
+    </div>
+    <div>
+      <label class="muted">Mes</label>
+      <select id="mes" style="width:100%;">
+        {% for num, nombre in meses %}
+          <option value="{{ num }}" {% if num == mes %}selected{% endif %}>{{ nombre }}</option>
+        {% endfor %}
+      </select>
+    </div>
+    <div>
+      <label class="muted">Año</label>
+      <select id="anio" style="width:100%;">
+        {% for a in anios %}
+          <option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </div>
+
+  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
+    <button class="btn" id="enviar">Enviar</button>
+    <button class="btn btn2" id="limpiar" type="button">Limpiar chat</button>
+  </div>
+
+</div>
+
+<script>
+  const chat = document.getElementById("chat");
+  const preguntaEl = document.getElementById("pregunta");
+  const mesEl = document.getElementById("mes");
+  const anioEl = document.getElementById("anio");
+  const btnEnviar = document.getElementById("enviar");
+  const btnLimpiar = document.getElementById("limpiar");
+  const err = document.getElementById("err");
+
+  function addMsg(who, text, type="bot"){
+    const box = document.createElement("div");
+    box.style.padding = "12px";
+    box.style.borderRadius = "16px";
+    box.style.border = "1px solid rgba(255,255,255,.10)";
+    box.style.background = type === "me" ? "rgba(96,165,250,.10)" : "rgba(255,255,255,.05)";
+    box.innerHTML = `<div style="font-weight:900;">${who}</div><div style="margin-top:6px; white-space:pre-wrap;">${escapeHtml(text)}</div>`;
+    chat.appendChild(box);
+    chat.scrollTop = chat.scrollHeight;
+  }
+
+  function escapeHtml(str){
+    return str.replace(/[&<>"']/g, (m) => ({
+      "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
+    }[m]));
+  }
+
+  function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== "") {
+      const cookies = document.cookie.split(";");
+      for (let i = 0; i < cookies.length; i++) {
+        const cookie = cookies[i].trim();
+        if (cookie.substring(0, name.length + 1) === (name + "=")) {
+          cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+          break;
+        }
+      }
+    }
+    return cookieValue;
+  }
+
+  async function preguntar(){
+    err.style.display = "none";
+    const pregunta = (preguntaEl.value || "").trim();
+    if(!pregunta){
+      err.textContent = "Escribe una pregunta.";
+      err.style.display = "block";
+      return;
+    }
+
+    addMsg("Tú", pregunta, "me");
+    preguntaEl.value = "";
+    btnEnviar.disabled = true;
+    btnEnviar.style.opacity = ".7";
+
+    addMsg("Asistente", "Pensando…", "bot");
+    const thinkingNode = chat.lastChild;
+
+    try{
+      const res = await fetch("{% url 'core:asistente_preguntar' %}", {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+          "X-CSRFToken": getCookie("csrftoken")
+        },
+        body: JSON.stringify({
+          pregunta,
+          mes: parseInt(mesEl.value),
+          anio: parseInt(anioEl.value)
+        })
+      });
+
+      const data = await res.json();
+      thinkingNode.remove();
+
+      if(!data.ok){
+        addMsg("Asistente", data.error || "Error al responder.", "bot");
+        return;
+      }
+
+      addMsg("Asistente", data.respuesta, "bot");
+    }catch(e){
+      thinkingNode.remove();
+      addMsg("Asistente", "Error de conexión. Intenta de nuevo.", "bot");
+    }finally{
+      btnEnviar.disabled = false;
+      btnEnviar.style.opacity = "1";
+    }
+  }
+
+  btnEnviar.addEventListener("click", preguntar);
+  preguntaEl.addEventListener("keydown", (e) => {
+    if(e.key === "Enter"){
+      e.preventDefault();
+      preguntar();
+    }
+  });
+
+  btnLimpiar.addEventListener("click", () => {
+    // deja solo el primer mensaje
+    const first = chat.firstElementChild;
+    chat.innerHTML = "";
+    if(first) chat.appendChild(first);
+  });
+</script>
+
+{% endblock %}
