@@ -282,4 +282,37 @@ PREGUNTA DEL USUARIO:
             texto = "No pude generar una respuesta. Intenta de nuevo con otra pregunta."
         return JsonResponse({"ok": True, "respuesta": texto, "resumen": resumen})
     except Exception as e:
-        return JsonResponse({"ok": False, "error": f"Error llamando a Gemini: {str(e)}"}, status=500)
+         msg = str(e)
+
+    # ✅ Si es cuota / rate limit: fallback sin IA (100% gratis)
+    if "429" in msg or "quota" in msg.lower() or "exceeded your current quota" in msg.lower():
+        # respuestas útiles sin IA, basadas en resumen agregado
+        tips = []
+        if resumen["total_ingresos"] > 0:
+            gasto_pct = (resumen["total_gastos"] / resumen["total_ingresos"]) * 100
+            tips.append(f"Estás gastando aprox. {gasto_pct:.1f}% de tus ingresos este mes.")
+        if resumen["balance"] < 0:
+            tips.append("Tu balance está NEGATIVO. Prioriza bajar gastos variables esta semana.")
+        else:
+            tips.append("Vas con balance POSITIVO. Intenta mantener el ritmo y separar un % a ahorro.")
+
+        top = resumen.get("top_gastos_categoria", [])[:3]
+        if top:
+            cats = ", ".join([f'{x["categoria"]} (${x["total"]:.0f})' for x in top])
+            tips.append(f"Top gastos por categoría: {cats}.")
+
+        fallback = (
+            "⚠️ La IA está temporalmente sin cuota (free tier en 0 / rate limit).\n\n"
+            "✅ Resumen rápido:\n"
+            f"- Ingresos: ${resumen['total_ingresos']:.0f}\n"
+            f"- Gastos: ${resumen['total_gastos']:.0f}\n"
+            f"- Balance: ${resumen['balance']:.0f}\n\n"
+            "💡 Consejos (sin IA):\n"
+            + "\n".join([f"- {t}" for t in tips]) +
+            "\n\n👉 Siguiente paso: dime tu meta (ej: ahorrar $100.000) y te digo cuánto debes recortar por semana."
+        )
+
+        return JsonResponse({"ok": True, "respuesta": fallback, "resumen": resumen})
+
+    # otros errores normales
+    return JsonResponse({"ok": False, "error": f"Error llamando a Gemini: {msg}"}, status=500)
