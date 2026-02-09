@@ -239,7 +239,7 @@ def asistente_preguntar(request):
 
     # Config Gemini
     genai.configure(api_key=api_key)
-    model = genai.GenerativeModel("gemini-1.5-flash")  # rápido y barato (ideal)
+    model = genai.GenerativeModel("gemini-1.0-pro")  # rápido y barato (ideal)
 
     system_style = f"""
 Eres un asistente financiero CASERO para Chile.
