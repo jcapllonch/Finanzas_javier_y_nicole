@@ -15,8 +15,9 @@
 
   <div class="spacer"></div>
 
+  <!-- CHAT -->
   <div class="card" style="background: rgba(255,255,255,.04); border-color: rgba(255,255,255,.10);">
-    <div id="chat" style="display:flex; flex-direction:column; gap:10px; max-height:420px; overflow:auto; padding-right:6px;">
+    <div id="chat" style="display:flex; flex-direction:column; gap:10px; max-height:520px; overflow:auto; padding-right:6px;">
       <div style="padding:12px; border-radius:16px; border:1px solid rgba(255,255,255,.10); background: rgba(255,255,255,.05);">
         <div style="font-weight:900;">Asistente</div>
         <div class="muted" style="margin-top:6px;">
@@ -28,42 +29,34 @@
 
   <div class="spacer"></div>
 
-  <div style="display:grid; grid-template-columns: 1fr 200px 200px; gap:12px;">
+  <!-- INPUT + BOTONES (SIN MES/AÑO) -->
+  <div style="display:grid; grid-template-columns: 1fr 200px; gap:12px;">
     <div>
       <label class="muted">Tu pregunta</label>
       <input id="pregunta" placeholder="Ej: Dame 3 consejos para gastar menos este mes" />
       <div id="err" class="muted" style="color:#fca5a5; margin-top:6px; display:none;"></div>
     </div>
-    <div>
-      <label class="muted">Mes</label>
-      <select id="mes" style="width:100%;">
-        {% for num, nombre in meses %}
-          <option value="{{ num }}" {% if num == mes %}selected{% endif %}>{{ nombre }}</option>
-        {% endfor %}
-      </select>
-    </div>
-    <div>
-      <label class="muted">Año</label>
-      <select id="anio" style="width:100%;">
-        {% for a in anios %}
-          <option value="{{ a }}" {% if a == anio %}selected{% endif %}>{{ a }}</option>
-        {% endfor %}
-      </select>
+    <div style="display:flex; flex-direction:column; gap:10px; justify-content:flex-end;">
+      <button class="btn" id="enviar" type="button">Enviar</button>
+      <button class="btn btn2" id="limpiar" type="button">Limpiar chat</button>
     </div>
   </div>
 
-  <div style="display:flex; gap:10px; flex-wrap:wrap; margin-top:12px;">
-    <button class="btn" id="enviar">Enviar</button>
-    <button class="btn btn2" id="limpiar" type="button">Limpiar chat</button>
-  </div>
+  <style>
+    /* móvil */
+    @media (max-width: 720px){
+      #chat{ max-height: 60vh !important; }
+      div[style*="grid-template-columns: 1fr 200px"]{
+        grid-template-columns: 1fr !important;
+      }
+    }
+  </style>
 
 </div>
 
 <script>
   const chat = document.getElementById("chat");
   const preguntaEl = document.getElementById("pregunta");
-  const mesEl = document.getElementById("mes");
-  const anioEl = document.getElementById("anio");
   const btnEnviar = document.getElementById("enviar");
   const btnLimpiar = document.getElementById("limpiar");
   const err = document.getElementById("err");
@@ -80,7 +73,7 @@
   }
 
   function escapeHtml(str){
-    return str.replace(/[&<>"']/g, (m) => ({
+    return (str || "").replace(/[&<>"']/g, (m) => ({
       "&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#039;"
     }[m]));
   }
@@ -111,6 +104,7 @@
 
     addMsg("Tú", pregunta, "me");
     preguntaEl.value = "";
+
     btnEnviar.disabled = true;
     btnEnviar.style.opacity = ".7";
 
@@ -124,11 +118,7 @@
           "Content-Type": "application/json",
           "X-CSRFToken": getCookie("csrftoken")
         },
-        body: JSON.stringify({
-          pregunta,
-          mes: parseInt(mesEl.value),
-          anio: parseInt(anioEl.value)
-        })
+        body: JSON.stringify({ pregunta })
       });
 
       const data = await res.json();
@@ -158,7 +148,6 @@
   });
 
   btnLimpiar.addEventListener("click", () => {
-    // deja solo el primer mensaje
     const first = chat.firstElementChild;
     chat.innerHTML = "";
     if(first) chat.appendChild(first);
