@@ -238,10 +238,10 @@ def asistente_preguntar(request):
         return JsonResponse({"ok": False, "error": "Falta GEMINI_API_KEY en variables de entorno"}, status=500)
 
     # Config Gemini
-    genai.configure(api_key=api_key)
-    model_name = os.getenv("GEMINI_MODEL", "gemini-1.0-pro").strip()  # rápido y barato (ideal)
-
+    model_name = (os.getenv("GEMINI_MODEL") or "models/gemini-2.0-flash").strip()
+    print(f"[IA] Modelo Gemini usado: {model_name}")
     model = genai.GenerativeModel(model_name)
+
     system_style = f"""
 Eres un asistente financiero CASERO para Chile.
 Hablas en español chileno neutro, claro y amable.
